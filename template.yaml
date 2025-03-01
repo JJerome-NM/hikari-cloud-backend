@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  python3.12
+
+  Sample SAM Template for Hikari-Cloud
+
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  HikariCloudCognitoPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: HikariCloudCognitoPool
+      AutoVerifiedAttributes:
+        - email
+
+  HikariCloudCognitoPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref HikariCloudCognitoPool
+      ClientName: HikariCloudCognitoPoolClient
+      GenerateSecret: false
+
+  HikariCloudApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      BinaryMediaTypes:
+        - '*/*'
+      EndpointConfiguration:
+        Type: REGIONAL
+      Auth:
+        DefaultAuthorizer: HikariCloudCognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          HikariCloudCognitoAuthorizer:
+            UserPoolArn: !GetAtt HikariCloudCognitoPool.Arn
+
+  ImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: images_table
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ImageUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: images_table
+      Events:
+        UploadImage:
+          Type: Api
+          Properties:
+            Path: /image/upload
+            Method: POST
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./image/upload
+      DockerTag: python3.12-v1
+
+  ImageLoadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: images_table
+      Events:
+        LoadImage:
+          Type: Api
+          Properties:
+            Path: /image/load
+            Method: GET
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./image/load
+      DockerTag: python3.12-v1
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${HikariCloudApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ImageUploadFunctionArn:
+    Description: "Image Upload Lambda Function ARN"
+    Value: !GetAtt ImageUploadFunction.Arn
+  ImageLoadFunctionArn:
+    Description: "Image Load Lambda Function ARN"
+    Value: !GetAtt ImageLoadFunction.Arn
