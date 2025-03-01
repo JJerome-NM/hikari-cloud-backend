@@ -1,17 +1,17 @@
 {
-  "TableName": "images_table",
+  "TableName": "folder_table",
   "KeySchema": [
-    { "AttributeName": "id", "KeyType": "HASH" }
+    { "AttributeName": "folderId", "KeyType": "HASH" }
   ],
   "AttributeDefinitions": [
-    { "AttributeName": "id", "AttributeType": "S" },
-    { "AttributeName": "userId", "AttributeType": "S" }
+    { "AttributeName": "folderId", "AttributeType": "S" },
+    { "AttributeName": "ownerId", "AttributeType": "S" }
   ],
   "GlobalSecondaryIndexes": [
     {
-      "IndexName": "userId-index",
+      "IndexName": "ownerId-index",
       "KeySchema": [
-        { "AttributeName": "userId", "KeyType": "HASH" }
+        { "AttributeName": "ownerId", "KeyType": "HASH" }
       ],
       "Projection": {
         "ProjectionType": "ALL"

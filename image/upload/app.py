@@ -7,7 +7,6 @@ from requests_toolbelt.multipart import decoder
 
 TABLE_NAME = "images_table"
 
-
 def lambda_handler(event, context):
     print("---- Start lambda process --------------------------------------")
 
@@ -21,7 +20,7 @@ def lambda_handler(event, context):
     user_id = claims.get("sub") or "local-test-user-id" # TODO FIX THIS
 
     if not user_id:
-        return {'statusCode': 403, 'body': 'Користувач не авторизований'}
+        return {'statusCode': 403, 'body': 'User is unauthorized'}
     print("User ID from Cognito:", user_id)
 
     body = base64.b64decode(event['body'])

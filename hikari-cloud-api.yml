@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: HikariCloud
+  version: 1.0.0
+servers:
+  - url: 'http:localhost:3000'
+
+
+paths:
+  /photo/{id}:
+    get:
+      tags:
+        - Photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityId"
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+    delete:
+      tags:
+        - Photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityId"
+      responses:
+        200:
+          description: Successful operation
+
+  /folder:
+    post:
+      tags:
+        - Folder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FolderCreateRequest'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+
+  /folder/{id}/upload:
+    post:
+      tags:
+        - Folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityId"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+
+  /folder/{id}:
+    get:
+      tags:
+        - Folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityId"
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+    delete:
+      tags:
+        - Folder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityId"
+      responses:
+        200:
+          description: Successful operation
+
+  /share:
+    post:
+      tags:
+        - Share
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareRequest'
+      responses:
+        200:
+          description: Successful operation
+
+components:
+  schemas:
+    EntityId:
+      type: string
+      format: uuid
+      examples:
+        - "606b4240-8e0b-4048-8417-f334fd2c9f46"
+
+    CognitoId:
+      type: string
+      format: uuid
+      examples:
+        - "606b4240-8e0b-4048-8417-f334fd2c9f46"
+
+    Folder:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/EntityId'
+        ownerId:
+          $ref: '#/components/schemas/CognitoId'
+        folderName:
+          type: string
+        parentFolderId:
+          $ref: '#/components/schemas/EntityId'
+        createdAt:
+          type: string
+
+    FolderCreateRequest:
+      type: object
+      properties:
+        folderName:
+          type: string
+        parentFolderId:
+          $ref: '#/components/schemas/EntityId'
+
+    Photo:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/EntityId'
+        ownerId:
+          $ref: '#/components/schemas/CognitoId'
+        folderId:
+          $ref: '#/components/schemas/EntityId'
+        s3Url:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+
+    ShareRequest:
+      type: object
+      properties:
+        itemId:
+          $ref: '#/components/schemas/EntityId'
+        sharedWithUserId:
+          $ref: '#/components/schemas/CognitoId'
+        itemType:
+          type: string
+        permissions:
+          type: string
+
+    Sharing:
+      type: object
+      properties:
+        itemId:
+          $ref: '#/components/schemas/EntityId'
+        sharedWithUserId:
+          $ref: '#/components/schemas/CognitoId'
+        itemType:
+          type: string
+        permissions:
+          type: string
+        createdAt:
+          type: string

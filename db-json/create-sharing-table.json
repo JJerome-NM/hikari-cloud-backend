@@ -1,0 +1,30 @@
+{
+  "TableName": "sharing_table",
+  "KeySchema": [
+    { "AttributeName": "itemId", "KeyType": "HASH" },
+    { "AttributeName": "sharedWithUserId", "KeyType": "RANGE" }
+  ],
+  "AttributeDefinitions": [
+    { "AttributeName": "itemId", "AttributeType": "S" },
+    { "AttributeName": "sharedWithUserId", "AttributeType": "S" }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "sharedWithUserId-index",
+      "KeySchema": [
+        { "AttributeName": "sharedWithUserId", "KeyType": "HASH" }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "TableName": "photo_table",
+  "KeySchema": [
+    { "AttributeName": "photoId", "KeyType": "HASH" }
+  ],
+  "AttributeDefinitions": [
+    { "AttributeName": "photoId", "AttributeType": "S" },
+    { "AttributeName": "ownerId", "AttributeType": "S" }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "ownerId-index",
+      "KeySchema": [
+        { "AttributeName": "ownerId", "KeyType": "HASH" }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}

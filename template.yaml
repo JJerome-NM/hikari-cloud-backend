@@ -39,22 +39,22 @@ Resources:
           HikariCloudCognitoAuthorizer:
             UserPoolArn: !GetAtt HikariCloudCognitoPool.Arn
 
-  ImagesTable:
+  FolderTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: images_table
+      TableName: folder_table
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: folderId
           AttributeType: S
-        - AttributeName: userId
+        - AttributeName: ownerId
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: folderId
           KeyType: HASH
       GlobalSecondaryIndexes:
-        - IndexName: userId-index
+        - IndexName: ownerId-index
           KeySchema:
-            - AttributeName: userId
+            - AttributeName: ownerId
               KeyType: HASH
           Projection:
             ProjectionType: ALL
@@ -65,7 +65,63 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-  ImageUploadFunction:
+  PhotoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: photo_table
+      AttributeDefinitions:
+        - AttributeName: photoId
+          AttributeType: S
+        - AttributeName: ownerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: photoId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ownerId-index
+          KeySchema:
+            - AttributeName: ownerId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  SharingTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: sharing_table
+      AttributeDefinitions:
+        - AttributeName: itemId
+          AttributeType: S
+        - AttributeName: sharedWithUserId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: itemId
+          KeyType: HASH
+        - AttributeName: sharedWithUserId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: sharedWithUserId-index
+          KeySchema:
+            - AttributeName: sharedWithUserId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+#   Folder Functions
+
+  CreateFolderFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
@@ -73,20 +129,20 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: images_table
+            TableName: folder_table
       Events:
-        UploadImage:
+        CreateFolder:
           Type: Api
           Properties:
-            Path: /image/upload
+            Path: /folder
             Method: POST
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./image/upload
+      DockerContext: ./endpoints/folder/createFolder
       DockerTag: python3.12-v1
 
-  ImageLoadFunction:
+  DeleteFolderFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
@@ -94,26 +150,131 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: images_table
+            TableName: folder_table
       Events:
-        LoadImage:
+        DeleteFolder:
           Type: Api
           Properties:
-            Path: /image/load
+            Path: /folder
+            Method: DELETE
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/folder/deleteFolder
+      DockerTag: python3.12-v1
+
+  GetFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: folder_table
+      Events:
+        GetFolder:
+          Type: Api
+          Properties:
+            Path: /folder/{id}
             Method: GET
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./image/load
+      DockerContext: ./endpoints/folder/getFolder
+      DockerTag: python3.12-v1
+
+  UploadPhotoToFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: folder_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /folder/{id}/upload
+            Method: POST
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/folder/uploadPhotoToFolder
+      DockerTag: python3.12-v1
+
+#   Photo Functions
+
+  DeletePhotoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: photo_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /photo/{id}
+            Method: DELETE
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/photo/deletePhoto
+      DockerTag: python3.12-v1
+
+  GetPhotoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: photo_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /photo/{id}
+            Method: GET
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/photo/getPhoto
+      DockerTag: python3.12-v1
+
+#   Share Function
+
+  EditShareFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: sharing_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /share/{id}
+            Method: GET
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/share/editShare
       DockerTag: python3.12-v1
 
 Outputs:
-  ApiEndpoint:
-    Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${HikariCloudApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-  ImageUploadFunctionArn:
-    Description: "Image Upload Lambda Function ARN"
-    Value: !GetAtt ImageUploadFunction.Arn
-  ImageLoadFunctionArn:
-    Description: "Image Load Lambda Function ARN"
-    Value: !GetAtt ImageLoadFunction.Arn
+  HikariCloudApiExport:
+    Description: "Api Gateway Arn"
+    Value: !Ref HikariCloudApi
+    Export:
+      Name: ImageUploadFunctionArnExport
