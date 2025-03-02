@@ -38,24 +38,39 @@ Resources:
         Authorizers:
           HikariCloudCognitoAuthorizer:
             UserPoolArn: !GetAtt HikariCloudCognitoPool.Arn
+      Models:
+        FolderCreate: # TODO Add validation
+          type: object
+          required:
+            - folderName
+          properties:
+            folderName:
+              type: string
+            parentFolderId:
+              type: string
+              pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
-  FolderTable:
+  CloudItemTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: folder_table
+      TableName: cloud_item_table
       AttributeDefinitions:
-        - AttributeName: folderId
+        - AttributeName: itemId
           AttributeType: S
         - AttributeName: ownerId
           AttributeType: S
+        - AttributeName: parentId
+          AttributeType: S
       KeySchema:
-        - AttributeName: folderId
+        - AttributeName: itemId
           KeyType: HASH
       GlobalSecondaryIndexes:
         - IndexName: ownerId-index
           KeySchema:
             - AttributeName: ownerId
               KeyType: HASH
+            - AttributeName: parentId
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
           ProvisionedThroughput:
@@ -65,62 +80,27 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-  PhotoTable:
+  CloudSharedTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: photo_table
+      TableName: cloud_shared_table
       AttributeDefinitions:
-        - AttributeName: photoId
+        - AttributeName: userId
           AttributeType: S
-        - AttributeName: ownerId
-          AttributeType: S
-        - AttributeName: folderId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: photoId
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: ownerId-index
-          KeySchema:
-            - AttributeName: ownerId
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
-        - IndexName: folderId-index
-          KeySchema:
-            - AttributeName: folderId
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-
-  SharingTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: sharing_table
-      AttributeDefinitions:
         - AttributeName: itemId
           AttributeType: S
-        - AttributeName: sharedWithUserId
-          AttributeType: S
       KeySchema:
-        - AttributeName: itemId
+        - AttributeName: userId
           KeyType: HASH
-        - AttributeName: sharedWithUserId
+        - AttributeName: itemId
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: sharedWithUserId-index
+        - IndexName: userId-index
           KeySchema:
-            - AttributeName: sharedWithUserId
+            - AttributeName: itemId
               KeyType: HASH
+            - AttributeName: userId
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
           ProvisionedThroughput:
@@ -130,7 +110,8 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-#   Folder Functions
+
+  #   Folder Functions
 
   CreateFolderFunction:
     Type: AWS::Serverless::Function
@@ -148,6 +129,11 @@ Resources:
             Path: /folder
             Method: POST
             RestApiId: !Ref HikariCloudApi
+            RequestModel:
+              Model: FolderCreate
+              Required: true
+              ValidateBody: true
+
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./endpoints/folder/createFolder
@@ -166,12 +152,12 @@ Resources:
         DeleteFolder:
           Type: Api
           Properties:
-            Path: /folder
+            Path: /folder/{id}
             Method: DELETE
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./endpoints/folder/deleteFolder
+      DockerContext: ./endpoints/item/delete
       DockerTag: python3.12-v1
 
   GetFolderFunction:
@@ -216,7 +202,7 @@ Resources:
       DockerContext: ./endpoints/folder/uploadPhotoToFolder
       DockerTag: python3.12-v1
 
-#   Photo Functions
+  #   Photo Functions
 
   DeletePhotoFunction:
     Type: AWS::Serverless::Function
@@ -260,7 +246,7 @@ Resources:
       DockerContext: ./endpoints/photo/getPhoto
       DockerTag: python3.12-v1
 
-#   Share Function
+  #   Share Function
 
   EditShareFunction:
     Type: AWS::Serverless::Function

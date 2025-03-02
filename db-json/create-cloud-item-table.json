@@ -1,0 +1,49 @@
+{
+  "TableName": "cloud_item_table",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "itemId",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "ownerId",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "parentId",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "itemId",
+      "KeyType": "HASH"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "ownerId-index",
+      "KeySchema": [
+        {
+          "AttributeName": "ownerId",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "parentId",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}
