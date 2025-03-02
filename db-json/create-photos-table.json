@@ -5,13 +5,26 @@
   ],
   "AttributeDefinitions": [
     { "AttributeName": "photoId", "AttributeType": "S" },
-    { "AttributeName": "ownerId", "AttributeType": "S" }
+    { "AttributeName": "ownerId", "AttributeType": "S" },
+    { "AttributeName": "folderId", "AttributeType": "S" }
   ],
   "GlobalSecondaryIndexes": [
     {
       "IndexName": "ownerId-index",
       "KeySchema": [
         { "AttributeName": "ownerId", "KeyType": "HASH" }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    }, {
+      "IndexName": "folderId-index",
+      "KeySchema": [
+        { "AttributeName": "folderId", "KeyType": "HASH" }
       ],
       "Projection": {
         "ProjectionType": "ALL"
