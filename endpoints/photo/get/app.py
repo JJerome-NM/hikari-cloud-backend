@@ -23,15 +23,10 @@ def lambda_handler(event, context):
     if existing_item['Item']['ownerId'] != user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': 'User is not authorized'})}
 
-    items_in_folder = ITEM_TABLE.query(
-        IndexName="ownerId-index",
-        KeyConditionExpression=Key('ownerId').eq(user_id) & Key('parentId').eq(item_id)
-    )
+    if existing_item['Item']['type'] != "PHOTO":
+        return {'statusCode': 403, 'body': json.dumps({'error': 'Item is not a photo'})}
 
     return {
         "statusCode": 200,
-        "body": json.dumps({
-            "folder": existing_item['Item'],
-            "items": items_in_folder['Items']
-        }),
+        "body": json.dumps(existing_item["Item"]),
     }

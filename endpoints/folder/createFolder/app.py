@@ -6,7 +6,7 @@ import boto3
 
 TABLE_NAME = "cloud_item_table"
 
-item_table = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
+ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
 
 
 def lambda_handler(event, context):
@@ -30,7 +30,18 @@ def lambda_handler(event, context):
     user_id = claims.get("sub") or "local-test-user-id"  # TODO FIX THIS
 
     if not user_id:
-        return {'statusCode': 403, 'body': 'User is unauthorized'}
+        return {'statusCode': 403, 'body': json.dumps({'error': 'No user_id provided'})}
+
+    if "parentId" in data: # TODO TEST THIS PART
+        parent = ITEM_TABLE.get_item(Key={"itemId": data["parentId"]})
+
+        if "Item" in parent:
+            if parent["Item"]["ownerId"] != user_id: # TODO Need check whether user have create permission
+                return {'statusCode': 403, 'body': json.dumps({'error': 'Invalid owner id'})}
+
+            if parent["Item"]["type"] != "FOLDER":
+                return {'statusCode': 404, 'body': json.dumps({'error': 'Invalid parent type'})}
+
 
     folder_id = str(uuid.uuid4())
 
@@ -44,11 +55,9 @@ def lambda_handler(event, context):
     if "parentId" in data:
         new_item["parentId"] = data["parentId"]
 
-    item_table.put_item(Item=new_item)
-
-    item = item_table.get_item(Key={"itemId": folder_id})
+    ITEM_TABLE.put_item(Item=new_item)
 
     return {
         "statusCode": 200,
-        "body": json.dumps(item["Item"])
+        "body": json.dumps(new_item)
     }

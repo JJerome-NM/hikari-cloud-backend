@@ -38,6 +38,14 @@ Resources:
         Authorizers:
           HikariCloudCognitoAuthorizer:
             UserPoolArn: !GetAtt HikariCloudCognitoPool.Arn
+
+      Cors:
+        AllowMethods: "'POST,GET,DELETE'"
+        AllowHeaders: "'Content-Type,Authorization,X-Forwarded-For'"
+        AllowOrigin: "'http://localhost:5173'"
+        MaxAge: "'600'"
+        AllowCredentials: true
+
       Models:
         FolderCreate: # TODO Add validation
           type: object
@@ -110,7 +118,6 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-
   #   Folder Functions
 
   CreateFolderFunction:
@@ -178,7 +185,28 @@ Resources:
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./endpoints/folder/getFolder
+      DockerContext: ./endpoints/item/get
+      DockerTag: python3.12-v1
+
+  GetRootFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: folder_table
+      Events:
+        GetFolder:
+          Type: Api
+          Properties:
+            Path: /folder
+            Method: GET
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/folder/getRootFolder
       DockerTag: python3.12-v1
 
   UploadPhotoToFolderFunction:
@@ -222,7 +250,7 @@ Resources:
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./endpoints/photo/deletePhoto
+      DockerContext: ./endpoints/item/delete
       DockerTag: python3.12-v1
 
   GetPhotoFunction:
@@ -243,7 +271,7 @@ Resources:
             RestApiId: !Ref HikariCloudApi
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./endpoints/photo/getPhoto
+      DockerContext: ./endpoints/photo/get
       DockerTag: python3.12-v1
 
   #   Share Function
