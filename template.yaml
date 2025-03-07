@@ -297,6 +297,48 @@ Resources:
       DockerContext: ./endpoints/share/editShare
       DockerTag: python3.12-v1
 
+  UseShareTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: sharing_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /share/use-token
+            Method: POST
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/share/useShareToken
+      DockerTag: python3.12-v1
+
+  GetSharedItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: sharing_table
+      Events:
+        UploadPhotoToFolder:
+          Type: Api
+          Properties:
+            Path: /share
+            Method: GET
+            RestApiId: !Ref HikariCloudApi
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./endpoints/share/getSharedItems
+      DockerTag: python3.12-v1
+
 Outputs:
   HikariCloudApiExport:
     Description: "Api Gateway Arn"

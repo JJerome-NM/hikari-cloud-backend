@@ -1,10 +1,15 @@
 import json
+from datetime import datetime, timedelta
 
 import boto3
+import jwt
 from boto3.dynamodb.conditions import Key
 
 TABLE_NAME = "cloud_item_table"
 ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
+
+JWT_SECRET = "your-secret-key" # TODO CHANGE THIS
+JWT_ALGORITHM = "HS256"
 
 
 def lambda_handler(event, context):
@@ -27,6 +32,14 @@ def lambda_handler(event, context):
         IndexName="ownerId-index",
         KeyConditionExpression=Key('ownerId').eq(user_id) & Key('parentId').eq(item_id)
     )
+
+    for item in items_in_folder['Items']:
+        payload = {
+            "itemId": item["itemId"],
+            "sharedBy": user_id,
+            "exp": datetime.utcnow() + timedelta(hours=24)
+        }
+        item["shareToken"] = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
     return {
         "statusCode": 200,
