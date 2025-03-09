@@ -11,7 +11,7 @@ BUCKET = boto3.resource('s3').Bucket(S3_NAME)
 def lambda_handler(event, context):
     item_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id"
+    user_id = claims.get("sub") or "local-test-user-id-3"
 
     if not user_id:
         return {
@@ -29,7 +29,7 @@ def lambda_handler(event, context):
     if item["Item"]["ownerId"] != user_id:
         return {
             'statusCode': 403,
-            'body': json.dumps({'error': 'User is not authorized'})
+            'body': json.dumps({'error': 'Access is denied'})
         }
 
     if item["Item"]["type"] == "FOLDER":

@@ -3,10 +3,15 @@ import base64
 import json
 import re
 import uuid
+
+from boto3.dynamodb.conditions import Key
 from requests_toolbelt.multipart import decoder
 
 TABLE_NAME = "cloud_item_table"
 ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
+
+SHARED_TABLE_NAME = "cloud_shared_table"
+SHARED_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(SHARED_TABLE_NAME)
 
 S3_NAME = "hikari-cloud-test"
 BUCKET = boto3.resource('s3').Bucket(S3_NAME)
@@ -14,7 +19,7 @@ BUCKET = boto3.resource('s3').Bucket(S3_NAME)
 def lambda_handler(event, context):
     parent_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id"
+    user_id = claims.get("sub") or "local-test-user-id-3"
 
     if not user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': "User isn't authorized"})}
@@ -72,6 +77,21 @@ def lambda_handler(event, context):
         "type": "PHOTO",
         "parentId": parent_id,
     }
+
+    users = SHARED_TABLE.query(
+        IndexName="parentId-index",
+        KeyConditionExpression=Key("parentId").eq(parent_id)
+    )
+
+    unique_users = {user["userId"]: user for user in users["Items"]}.values()
+    with SHARED_TABLE.batch_writer() as batch:
+        for user in unique_users:
+            batch.put_item(Item={
+                "itemId": new_item["itemId"],
+                "userId": user["userId"],
+                "parentId": new_item["parentId"],
+                "permissions": ["VIEW"]
+            })
 
     ITEM_TABLE.put_item(Item=new_item)
 

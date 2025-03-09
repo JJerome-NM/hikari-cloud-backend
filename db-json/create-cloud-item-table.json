@@ -40,6 +40,26 @@
         "ReadCapacityUnits": 1,
         "WriteCapacityUnits": 1
       }
+    },
+    {
+      "IndexName": "parentId-index",
+      "KeySchema": [
+        {
+          "AttributeName": "parentId",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "ownerId",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
     }
   ],
   "ProvisionedThroughput": {

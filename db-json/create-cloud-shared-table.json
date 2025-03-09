@@ -8,6 +8,10 @@
     {
       "AttributeName": "itemId",
       "AttributeType": "S"
+    },
+    {
+      "AttributeName": "parentId",
+      "AttributeType": "S"
     }
   ],
   "KeySchema": [
@@ -30,6 +34,46 @@
         },
         {
           "AttributeName": "userId",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    },
+    {
+      "IndexName": "parentId-index",
+      "KeySchema": [
+        {
+          "AttributeName": "parentId",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "userId",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 1,
+        "WriteCapacityUnits": 1
+      }
+    },
+    {
+      "IndexName": "parentId-itemId-index",
+      "KeySchema": [
+        {
+          "AttributeName": "parentId",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "itemId",
           "KeyType": "RANGE"
         }
       ],

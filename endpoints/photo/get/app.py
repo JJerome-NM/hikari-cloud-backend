@@ -1,4 +1,6 @@
 import json
+import os
+
 import boto3
 from boto3.dynamodb.conditions import Key
 import jwt
@@ -7,6 +9,9 @@ from datetime import datetime, timedelta
 TABLE_NAME = "cloud_item_table"
 ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
 
+SHARED_TABLE_NAME = "cloud_shared_table"
+SHARED_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(SHARED_TABLE_NAME)
+
 S3_NAME = "hikari-cloud-test"
 S3_CLIENT = boto3.client(
     's3',
@@ -14,13 +19,13 @@ S3_CLIENT = boto3.client(
     endpoint_url='https://s3.eu-central-1.amazonaws.com'
 )
 
-JWT_SECRET = "your-secret-key" # TODO CHANGE THIS
+JWT_SECRET = os.getenv('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 
 def lambda_handler(event, context):
     item_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id"
+    user_id = claims.get("sub") or "local-test-user-id-3"
 
     if not user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': 'User is unauthorized'})}
@@ -29,8 +34,13 @@ def lambda_handler(event, context):
     if 'Item' not in existing_item:
         return {'statusCode': 404, 'body': json.dumps({'error': 'Item not found'})}
 
+    shared_items = SHARED_TABLE.query(
+        KeyConditionExpression=Key('userId').eq(user_id) & Key('itemId').eq(item_id)
+    )
+
     if existing_item['Item']['ownerId'] != user_id:
-        return {'statusCode': 403, 'body': json.dumps({'error': 'User is not authorized'})}
+        if "Items" not in shared_items or len(shared_items["Items"]) == 0:
+            return {'statusCode': 403, 'body': json.dumps({'error': 'Item not found'})}
 
     if existing_item['Item']['type'] != "PHOTO":
         return {'statusCode': 403, 'body': json.dumps({'error': 'Item is not a photo'})}

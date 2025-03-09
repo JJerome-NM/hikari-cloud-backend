@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 import jwt
@@ -8,12 +9,12 @@ import boto3
 TABLE_NAME = "cloud_item_table"
 ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
 
-JWT_SECRET = "your-secret-key"  # TODO CHANGE THIS
+JWT_SECRET = os.getenv('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 
 def lambda_handler(event, context):
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id"  # TODO FIX THIS
+    user_id = claims.get("sub") or "local-test-user-id-3"  # TODO FIX THIS
 
     if not user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': 'User is unauthorized'})}

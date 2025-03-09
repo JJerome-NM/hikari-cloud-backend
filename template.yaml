@@ -2,12 +2,29 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   python3.12
-
   Sample SAM Template for Hikari-Cloud
 
 Globals:
   Function:
     Timeout: 3
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Bucket name
+    Default: "hikari-cloud-storage"
+  DynamoDBItemsTableName:
+    Type: String
+    Description: Bucket name
+    Default: "cloud_item_table"
+  DynamoDBSharedTableName:
+    Type: String
+    Description: Bucket name
+    Default: "cloud_shared_table"
+  JWTSecret:
+    Type: String
+    Description: Secret key for JWT
+    Default: "local-secret-key"
 
 Resources:
   HikariCloudCognitoPool:
@@ -58,10 +75,10 @@ Resources:
               type: string
               pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
-  CloudItemTable:
+  HikariCloudItemTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: cloud_item_table
+      TableName: !Ref DynamoDBItemsTableName
       AttributeDefinitions:
         - AttributeName: itemId
           AttributeType: S
@@ -84,18 +101,31 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
+        - IndexName: parentId-index
+          KeySchema:
+            - AttributeName: parentId
+              KeyType: HASH
+            - AttributeName: ownerId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
-  CloudSharedTable:
+  HikariCloudSharedTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: cloud_shared_table
+      TableName: !Ref DynamoDBSharedTableName
       AttributeDefinitions:
         - AttributeName: userId
           AttributeType: S
         - AttributeName: itemId
+          AttributeType: S
+        - AttributeName: parentId
           AttributeType: S
       KeySchema:
         - AttributeName: userId
@@ -114,9 +144,25 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
+        - IndexName: parentId-index
+          KeySchema:
+            - AttributeName: parentId
+              KeyType: HASH
+            - AttributeName: userId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
+
+  HikariCloudS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
 
   #   Folder Functions
 
@@ -129,6 +175,9 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: folder_table
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         CreateFolder:
           Type: Api
@@ -155,6 +204,9 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: folder_table
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         DeleteFolder:
           Type: Api
@@ -175,7 +227,12 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: folder_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         GetFolder:
           Type: Api
@@ -196,7 +253,12 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: folder_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         GetFolder:
           Type: Api
@@ -217,7 +279,14 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: folder_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -240,7 +309,14 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: photo_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -261,7 +337,14 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: photo_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -284,7 +367,12 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: sharing_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -305,7 +393,12 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: sharing_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -326,7 +419,12 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: sharing_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBItemsTableName
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JWTSecret
       Events:
         UploadPhotoToFolder:
           Type: Api

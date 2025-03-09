@@ -1,9 +1,10 @@
 import base64
 import json
+import os
+
 import boto3
 import jwt
 from boto3.dynamodb.conditions import Attr, Key
-from pyexpat.errors import messages
 
 ITEM_TABLE_NAME = "cloud_item_table"
 ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(ITEM_TABLE_NAME)
@@ -11,7 +12,7 @@ ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.interna
 SHARED_TABLE_NAME = "cloud_shared_table"
 SHARED_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(SHARED_TABLE_NAME)
 
-JWT_SECRET = "your-secret-key"  # TODO CHANGE THIS
+JWT_SECRET = os.getenv('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 
 
@@ -39,7 +40,7 @@ def lambda_handler(event, context):
         }
 
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id"  # TODO FIX THIS
+    user_id = claims.get("sub") or "local-test-user-id-3"  # TODO FIX THIS
 
     if not user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': 'No user_id provided'})}
@@ -77,13 +78,12 @@ def lambda_handler(event, context):
     )
     photos = items_in_folder["Items"]
 
-    print(photos)
-
     with SHARED_TABLE.batch_writer() as batch:
         for photo in photos:
             batch.put_item(Item={
                 "itemId": photo["itemId"],
                 "userId": user_id,
+                "parentId": photo["parentId"],
                 "permissions": ["VIEW"]
             })
 
