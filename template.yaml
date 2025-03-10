@@ -28,11 +28,11 @@ Parameters:
   HikariCloudFrontend:
     Type: String
     Description: Frontend url
-    Default: http://localhost:5173
+    Default: https://jjerome-nm.github.io
   HikariCloudFrontendCallbacks:
     Type: String
     Description: Frontend callback url
-    Default: http://localhost:5173/hikari-cloud-frontend
+    Default: https://jjerome-nm.github.io/hikari-cloud-frontend
 
 Resources:
   HikariCloudCognitoPool:
@@ -41,15 +41,11 @@ Resources:
       UserPoolName: HikariCloudCognitoPool
       AutoVerifiedAttributes:
         - email
-#      Schema:
-#        - Name: email
-#          AttributeDataType: String
-#          Mutable: false
-#          Required: true
-#        - Name: name
-#          AttributeDataType: String
-#          Mutable: true
-#          Required: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
 
   HikariCloudCognitoPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -60,8 +56,10 @@ Resources:
       AllowedOAuthFlowsUserPoolClient: True
       CallbackURLs:
         - !Ref HikariCloudFrontendCallbacks
+        - http://localhost:5173
       LogoutURLs:
         - !Ref HikariCloudFrontendCallbacks
+        - http://localhost:5173
       AllowedOAuthFlows:
         - code
         - implicit
