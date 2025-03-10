@@ -16,7 +16,7 @@ def build_response(status: int, body):
     return {
         "statusCode": status,
         "headers": {
-            'Access-Control-Allow-Origin': 'https://jjerome-nm.github.io',
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
             'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
         },

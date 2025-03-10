@@ -19,7 +19,7 @@ def build_response(status: int, body):
     return {
         "statusCode": status,
         "headers": {
-            'Access-Control-Allow-Origin': 'https://jjerome-nm.github.io',
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
             'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
         },
@@ -33,7 +33,10 @@ def lambda_handler(event, context):
         return build_response(400, {'error': 'No body provided'})
 
     try:
-        body_decoded = base64.b64decode(event['body']).decode('utf-8')
+        if event.get("isBase64Encoded", False):
+            body_decoded = base64.b64decode(event['body']).decode('utf-8')
+        else:
+            body_decoded = event['body']
         data = json.loads(body_decoded)
     except Exception as e:
         print("Body decode error:", e)

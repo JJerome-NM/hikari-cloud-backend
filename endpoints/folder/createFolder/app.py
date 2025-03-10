@@ -1,5 +1,6 @@
 import json
 import base64
+import os
 import uuid
 
 import boto3
@@ -13,7 +14,7 @@ def build_response(status: int, body):
     return {
         "statusCode": status,
         "headers": {
-            'Access-Control-Allow-Origin': 'https://jjerome-nm.github.io',
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
             'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
         },
@@ -23,7 +24,7 @@ def build_response(status: int, body):
 
 def lambda_handler(event, context):
     if "body" not in event or not event["body"]:
-        return build_response(400, {"message": "body is required"})
+        return build_response(400, {"error": "body is required"})
 
     try:
         if event.get("isBase64Encoded", False):
@@ -33,24 +34,24 @@ def lambda_handler(event, context):
         data = json.loads(body_decoded)
     except Exception as e:
         print("Body decode error:", e)
-        return build_response(400, {"message": "body decode error"})
+        return build_response(400, {"error": "body decode error"})
 
 
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
     user_id = claims.get("sub") or "local-test-user-id-3"  # TODO FIX THIS
 
     if not user_id:
-        return build_response(400, {"message": "user_id is required"})
+        return build_response(400, {"error": "user_id is required"})
 
     if "parentId" in data: # TODO TEST THIS PART
         parent = ITEM_TABLE.get_item(Key={"itemId": data["parentId"]})
 
         if "Item" in parent:
             if parent["Item"]["ownerId"] != user_id: # TODO Need check whether user have create permission
-                return build_response(403, {"message": "user_id is forbidden"})
+                return build_response(403, {"error": "user_id is forbidden"})
 
             if parent["Item"]["type"] != "FOLDER":
-                return build_response(403, {"message": "user_id is forbidden"})
+                return build_response(403, {"error": "user_id is forbidden"})
 
 
     folder_id = str(uuid.uuid4())

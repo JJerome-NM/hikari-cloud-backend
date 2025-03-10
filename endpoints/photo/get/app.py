@@ -12,7 +12,7 @@ ITEM_TABLE = boto3.resource('dynamodb').Table(TABLE_NAME)
 SHARED_TABLE_NAME = "cloud_shared_table"
 SHARED_TABLE = boto3.resource('dynamodb').Table(SHARED_TABLE_NAME)
 
-S3_NAME = "hikari-cloud-test"
+S3_NAME = os.getenv('HIKARI_CLOUD_S3BUCKET')
 S3_CLIENT = boto3.client(
     's3',
     region_name='eu-central-1',
@@ -27,7 +27,7 @@ def build_response(status: int, body):
     return {
         "statusCode": status,
         "headers": {
-            'Access-Control-Allow-Origin': 'https://jjerome-nm.github.io',
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
             'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
         },

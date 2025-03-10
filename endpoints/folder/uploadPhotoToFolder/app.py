@@ -1,3 +1,5 @@
+import os
+
 import boto3
 import base64
 import json
@@ -13,14 +15,14 @@ ITEM_TABLE = boto3.resource('dynamodb').Table(TABLE_NAME)
 SHARED_TABLE_NAME = "cloud_shared_table"
 SHARED_TABLE = boto3.resource('dynamodb').Table(SHARED_TABLE_NAME)
 
-S3_NAME = "hikari-cloud-test"
+S3_NAME = os.environ['HIKARI_CLOUD_S3BUCKET']
 BUCKET = boto3.resource('s3').Bucket(S3_NAME)
 
 def build_response(status: int, body):
     return {
         "statusCode": status,
         "headers": {
-            'Access-Control-Allow-Origin': 'https://jjerome-nm.github.io',
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
             'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
         },
@@ -46,7 +48,10 @@ def lambda_handler(event, context):
         return build_response(400, {"error": "Content type is required"})
 
     try:
-        body_bytes: bytes = base64.b64decode(event['body'])
+        if event.get("isBase64Encoded", False):
+            body_bytes = base64.b64decode(event['body'])
+        else:
+            body_bytes = event['body']
         multipart_data = decoder.MultipartDecoder(body_bytes, content_type)
         file_name = None
         file_bytes = None

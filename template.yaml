@@ -16,15 +16,24 @@ Parameters:
   DynamoDBItemsTableName:
     Type: String
     Description: Bucket name
-    Default: "cloud_item_table"
+    Default: cloud_item_table
   DynamoDBSharedTableName:
     Type: String
     Description: Bucket name
-    Default: "cloud_shared_table"
+    Default: cloud_shared_table
   JWTSecret:
     Type: String
     Description: Secret key for JWT
-    Default: "local-secret-key"
+    Default: local-secret-key
+  HikariCloudFrontend:
+    Type: String
+    Description: Frontend url
+    Default: http://localhost:5173
+  HikariCloudFrontendCallbacks:
+    Type: String
+    Description: Frontend callback url
+    Default: http://localhost:5173/hikari-cloud-frontend
+#    Default: !Sub "'${HikariCloudFrontend}/hikari-cloud-frontend'"
 
 Resources:
   HikariCloudCognitoPool:
@@ -51,9 +60,9 @@ Resources:
       GenerateSecret: false
       AllowedOAuthFlowsUserPoolClient: True
       CallbackURLs:
-        - https://jjerome-nm.github.io/hikari-cloud-frontend
+        - !Ref HikariCloudFrontendCallbacks
       LogoutURLs:
-        - https://jjerome-nm.github.io/hikari-cloud-frontend
+        - !Ref HikariCloudFrontendCallbacks
       AllowedOAuthFlows:
         - code
         - implicit
@@ -75,10 +84,14 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-#      BinaryMediaTypes:
-#        - image/*
-#        - multipart/form-data
-#        - application/json
+      BinaryMediaTypes:
+        - "multipart/form-data"
+        - "image/png"
+        - "image/jpeg"
+        - "image/jpg"
+        - "image/gif"
+        - "image/webp"
+        - "application/octet-stream"
       EndpointConfiguration:
         Type: REGIONAL
       Auth:
@@ -102,21 +115,9 @@ Resources:
       Cors:
         AllowMethods: "'POST,GET,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'https://jjerome-nm.github.io'"
+        AllowOrigin: !Sub "'${HikariCloudFrontend}'"
         MaxAge: "'600'"
         AllowCredentials: true
-
-#      Models:
-#        FolderCreate: # TODO Add validation
-#          type: object
-#          required:
-#            - folderName
-#          properties:
-#            folderName:
-#              type: string
-#            parentFolderId:
-#              type: string
-#              pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
   HikariCloudItemTable:
     Type: AWS::DynamoDB::Table
@@ -223,6 +224,7 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
       Events:
         CreateFolder:
           Type: Api
@@ -230,10 +232,6 @@ Resources:
             Path: /folder
             Method: POST
             RestApiId: !Ref HikariCloudApi
-#            RequestModel:
-#              Model: FolderCreate
-#              Required: true
-#              ValidateBody: true
 
     Metadata:
       Dockerfile: Dockerfile
@@ -254,6 +252,8 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
+          HIKARI_CLOUD_S3BUCKET: !Ref HikariCloudS3Bucket
       Events:
         DeleteFolder:
           Type: Api
@@ -280,6 +280,7 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
       Events:
         GetFolder:
           Type: Api
@@ -306,6 +307,7 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
       Events:
         GetFolder:
           Type: Api
@@ -334,6 +336,8 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
+          HIKARI_CLOUD_S3BUCKET: !Ref HikariCloudS3Bucket
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -364,6 +368,8 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
+          HIKARI_CLOUD_S3BUCKET: !Ref HikariCloudS3Bucket
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -392,6 +398,8 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
+          HIKARI_CLOUD_S3BUCKET: !Ref HikariCloudS3Bucket
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -420,6 +428,7 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
       Events:
         UploadPhotoToFolder:
           Type: Api
@@ -446,6 +455,7 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
+          HIKARI_CLOUD_FRONTEND: !Ref HikariCloudFrontend
       Events:
         UploadPhotoToFolder:
           Type: Api
