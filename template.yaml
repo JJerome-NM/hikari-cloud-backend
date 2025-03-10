@@ -33,6 +33,15 @@ Resources:
       UserPoolName: HikariCloudCognitoPool
       AutoVerifiedAttributes:
         - email
+#      Schema:
+#        - Name: email
+#          AttributeDataType: String
+#          Mutable: false
+#          Required: true
+#        - Name: name
+#          AttributeDataType: String
+#          Mutable: true
+#          Required: true
 
   HikariCloudCognitoPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -40,16 +49,50 @@ Resources:
       UserPoolId: !Ref HikariCloudCognitoPool
       ClientName: HikariCloudCognitoPoolClient
       GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: True
+      CallbackURLs:
+        - https://jjerome-nm.github.io/hikari-cloud-frontend
+      LogoutURLs:
+        - https://jjerome-nm.github.io/hikari-cloud-frontend
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+        - profile
+      SupportedIdentityProviders:
+        - COGNITO
+
+  HikariCloudCognitoPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref HikariCloudCognitoPool
+      Domain: "hikari-cloud-auth"
 
   HikariCloudApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-      BinaryMediaTypes:
-        - '*/*'
+#      BinaryMediaTypes:
+#        - image/*
+#        - multipart/form-data
+#        - application/json
       EndpointConfiguration:
         Type: REGIONAL
       Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: "Allow"
+              Principal: "*"
+              Action: "execute-api:Invoke"
+              Resource: "execute-api:/Prod/*/*"
+            - Effect: "Allow"
+              Principal: "*"
+              Action: "execute-api:Invoke"
+              Resource: "execute-api:/Prod/OPTIONS/*"
+
         DefaultAuthorizer: HikariCloudCognitoAuthorizer
         AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
@@ -57,23 +100,23 @@ Resources:
             UserPoolArn: !GetAtt HikariCloudCognitoPool.Arn
 
       Cors:
-        AllowMethods: "'POST,GET,DELETE'"
-        AllowHeaders: "'Content-Type,Authorization,X-Forwarded-For'"
-        AllowOrigin: "'http://localhost:5173'"
+        AllowMethods: "'POST,GET,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'https://jjerome-nm.github.io'"
         MaxAge: "'600'"
         AllowCredentials: true
 
-      Models:
-        FolderCreate: # TODO Add validation
-          type: object
-          required:
-            - folderName
-          properties:
-            folderName:
-              type: string
-            parentFolderId:
-              type: string
-              pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+#      Models:
+#        FolderCreate: # TODO Add validation
+#          type: object
+#          required:
+#            - folderName
+#          properties:
+#            folderName:
+#              type: string
+#            parentFolderId:
+#              type: string
+#              pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 
   HikariCloudItemTable:
     Type: AWS::DynamoDB::Table
@@ -174,7 +217,9 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: folder_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
@@ -185,10 +230,10 @@ Resources:
             Path: /folder
             Method: POST
             RestApiId: !Ref HikariCloudApi
-            RequestModel:
-              Model: FolderCreate
-              Required: true
-              ValidateBody: true
+#            RequestModel:
+#              Model: FolderCreate
+#              Required: true
+#              ValidateBody: true
 
     Metadata:
       Dockerfile: Dockerfile
@@ -203,7 +248,9 @@ Resources:
         - x86_64
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: folder_table
+            TableName: !Ref DynamoDBItemsTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
@@ -229,7 +276,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
@@ -255,7 +302,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
@@ -281,7 +328,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName
       Environment:
@@ -311,7 +358,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName
       Environment:
@@ -339,7 +386,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName
       Environment:
@@ -359,32 +406,6 @@ Resources:
 
   #   Share Function
 
-  EditShareFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      Architectures:
-        - x86_64
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
-      Environment:
-        Variables:
-          JWT_SECRET: !Ref JWTSecret
-      Events:
-        UploadPhotoToFolder:
-          Type: Api
-          Properties:
-            Path: /share/{id}
-            Method: GET
-            RestApiId: !Ref HikariCloudApi
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./endpoints/share/editShare
-      DockerTag: python3.12-v1
-
   UseShareTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -395,7 +416,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret
@@ -421,7 +442,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DynamoDBItemsTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref DynamoDBItemsTableName
+            TableName: !Ref DynamoDBSharedTableName
       Environment:
         Variables:
           JWT_SECRET: !Ref JWTSecret

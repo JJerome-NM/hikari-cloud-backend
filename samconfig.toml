@@ -16,6 +16,11 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 resolve_image_repos = true
+stack_name = "Hikari-Cloud-Test-Stack"
+s3_prefix = "Hikari-Cloud-Test-Stack"
+region = "eu-central-1"
+disable_rollback = true
+parameter_overrides = "S3BucketName=\"hikari-cloud-storage\" DynamoDBItemsTableName=\"cloud_item_table\" DynamoDBSharedTableName=\"cloud_shared_table\" JWTSecret=\"local-secret-key\""
 
 [default.package.parameters]
 resolve_s3 = true
