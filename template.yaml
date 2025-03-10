@@ -33,7 +33,6 @@ Parameters:
     Type: String
     Description: Frontend callback url
     Default: http://localhost:5173/hikari-cloud-frontend
-#    Default: !Sub "'${HikariCloudFrontend}/hikari-cloud-frontend'"
 
 Resources:
   HikariCloudCognitoPool:
