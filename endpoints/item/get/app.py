@@ -26,7 +26,7 @@ def deserialize_item(item):
 def lambda_handler(event, context):
     item_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id-3"  # TODO FIX THIS
+    user_id = claims.get("sub")  # TODO FIX THIS
 
     if not user_id:
         return {'statusCode': 403, 'body': json.dumps({'error': 'User is unauthorized'})}

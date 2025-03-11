@@ -11,7 +11,7 @@ BUCKET = boto3.resource('s3').Bucket(S3_NAME)
 def lambda_handler(event, context):
     item_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    user_id = claims.get("sub") or "local-test-user-id-3"
+    user_id = claims.get("sub")
 
     if not user_id:
         return {
