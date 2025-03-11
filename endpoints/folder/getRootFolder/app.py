@@ -7,17 +7,29 @@ import json
 import boto3
 
 TABLE_NAME = "cloud_item_table"
-ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
+ITEM_TABLE = boto3.resource('dynamodb').Table(TABLE_NAME)
 
 JWT_SECRET = os.getenv('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
+
+def build_response(status: int, body):
+    return {
+        "statusCode": status,
+        "headers": {
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
+        },
+        "body": json.dumps(body),
+    }
+
 
 def lambda_handler(event, context):
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
     user_id = claims.get("sub")  # TODO FIX THIS
 
     if not user_id:
-        return {'statusCode': 403, 'body': json.dumps({'error': 'User is unauthorized'})}
+        return build_response(403, {'error': 'User is unauthorized'})
 
     response = ITEM_TABLE.scan(  # TODO Fix this bad solution (Scan has poor performance)
         FilterExpression=Attr('ownerId').eq(user_id) & Attr('parentId').not_exists()
@@ -31,9 +43,6 @@ def lambda_handler(event, context):
         }
         item["shareToken"] = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps({
-            "items": response['Items']
-        }),
-    }
+    return build_response(200, {
+        "items": response['Items']
+    })

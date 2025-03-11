@@ -7,12 +7,12 @@ import jwt
 from datetime import datetime, timedelta
 
 TABLE_NAME = "cloud_item_table"
-ITEM_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(TABLE_NAME)
+ITEM_TABLE = boto3.resource('dynamodb').Table(TABLE_NAME)
 
 SHARED_TABLE_NAME = "cloud_shared_table"
-SHARED_TABLE = boto3.resource('dynamodb', endpoint_url="http://host.docker.internal:8000").Table(SHARED_TABLE_NAME)
+SHARED_TABLE = boto3.resource('dynamodb').Table(SHARED_TABLE_NAME)
 
-S3_NAME = "hikari-cloud-test"
+S3_NAME = os.getenv('HIKARI_CLOUD_S3BUCKET')
 S3_CLIENT = boto3.client(
     's3',
     region_name='eu-central-1',
@@ -22,17 +22,30 @@ S3_CLIENT = boto3.client(
 JWT_SECRET = os.getenv('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 
+
+def build_response(status: int, body):
+    return {
+        "statusCode": status,
+        "headers": {
+            'Access-Control-Allow-Origin': os.getenv('HIKARI_CLOUD_FRONTEND'),
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT,DELETE'
+        },
+        "body": json.dumps(body),
+    }
+
+
 def lambda_handler(event, context):
     item_id = event.get('pathParameters', {}).get('id')
     claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
     user_id = claims.get("sub")
 
     if not user_id:
-        return {'statusCode': 403, 'body': json.dumps({'error': 'User is unauthorized'})}
+        return build_response(403, {'error': 'User is unauthorized'})
 
     existing_item = ITEM_TABLE.get_item(Key={"itemId": item_id})
     if 'Item' not in existing_item:
-        return {'statusCode': 404, 'body': json.dumps({'error': 'Item not found'})}
+        return build_response(403, {'error': 'Item not found'})
 
     shared_items = SHARED_TABLE.query(
         KeyConditionExpression=Key('userId').eq(user_id) & Key('itemId').eq(item_id)
@@ -40,10 +53,10 @@ def lambda_handler(event, context):
 
     if existing_item['Item']['ownerId'] != user_id:
         if "Items" not in shared_items or len(shared_items["Items"]) == 0:
-            return {'statusCode': 403, 'body': json.dumps({'error': 'Item not found'})}
+            return build_response(403, {'error': 'Item not found'})
 
     if existing_item['Item']['type'] != "PHOTO":
-        return {'statusCode': 403, 'body': json.dumps({'error': 'Item is not a photo'})}
+        return build_response(403, {'error': 'Item is not a photo'})
 
     try:
         presigned_url = S3_CLIENT.generate_presigned_url(
@@ -68,17 +81,11 @@ def lambda_handler(event, context):
         share_token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     except Exception as e:
         print("Presigned URL or JWT generation error:", e)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Failed to generate presigned URL or JWT token', 'details': str(e)})
-        }
+        return build_response(403, {'error': 'Failed to generate presigned URL or JWT token', 'details': str(e)})
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps({
-            "item": existing_item['Item'],
-            "presignedUrl": presigned_url,
-            "downloadUrl": download_presigned_url,
-            "shareToken": share_token
-        }),
-    }
+    return build_response(200, {
+        "item": existing_item['Item'],
+        "presignedUrl": presigned_url,
+        "downloadUrl": download_presigned_url,
+        "shareToken": share_token
+    })
